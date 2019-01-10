@@ -1,0 +1,17 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Simple S3 bucket",
+  "Resources": {
+    "S3Bucket": {
+      "Type" : "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl" : "PublicRead",
+        "BucketName" : "public-bucket-abcd-test-1234",
+        "VersioningConfiguration":{
+          "Status":"Enabled"
+        }
+
+      }
+    }
+  }
+}
