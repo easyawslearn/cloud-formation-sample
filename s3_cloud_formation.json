@@ -25,6 +25,11 @@
       ],
       "Default": "Suspended"
     },
+    "LambdaFunctionarn": {
+      "Description": "A lambda Function arn for notification",
+      "Type": "String",
+      "Default": ""
+    },
     "S3AccessControlStatus": {
       "Description": "Enabled, Suspend or Ignore Versioning",
       "Type": "String",
@@ -68,6 +73,20 @@
             "Ref": "s3LoggingBucket"
           },
           "LogFilePrefix": ".logs"
+        },
+        "NotificationConfiguration" : {
+          "LambdaConfigurations" : [{
+            "Function" : { "ref": "LambdaFunctionarn"},
+            "Event" : "s3:ObjectCreated:*",
+            "Filter" : {
+              "S3Key" : {
+                "Rules" : [{
+                  "Name" : "suffix",
+                  "Value" : "zip"
+                }]
+              }
+            }
+          }]
         },
         "LifecycleConfiguration": {
           "Rules": [
