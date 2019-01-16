@@ -1,0 +1,139 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Simple S3 bucket",
+  "Parameters": {
+    "S3BucketName": {
+      "Description": "Name of the S3 bucket",
+      "Type": "String",
+      "ConstraintDescription": "S3BucketName must be between 3 and 63 characters in length.",
+      "MinLength": "3",
+      "MaxLength": "63"
+    },
+    "S3LifeCycleDelete": {
+      "Description": "Specify a number of days of keep files in the bucket, a value of 0 keeps the files stored in the bucket.",
+      "Type": "Number",
+      "MinValue": "0",
+      "MaxValue": "365",
+      "Default": "0"
+    },
+    "S3LifeCycleDeleteMultipartUpload": {
+      "Description": "Specify a number of days to keep multipart uploads available, a value of 0 keeps them available forever.",
+      "Type": "Number",
+      "MinValue": "0",
+      "MaxValue": "365",
+      "Default": "0"
+    },
+    "S3AccessControlStatus": {
+      "Description": "Enabled, Suspend or Ignore Versioning",
+      "Type": "String",
+      "AllowedValues": [
+        "AuthenticatedRead",
+        "AwsExecRead",
+        "BucketOwnerRead",
+        "BucketOwnerFullControl",
+        "LogDeliveryWrite",
+        "Private",
+        "PublicRead",
+        "PublicReadWrite"
+      ],
+      "Default": "Private"
+    }
+  },
+  "Conditions" : {
+    "EnableLifecycle": {
+      "Fn::Not": [
+          {
+            "Fn::Equals": [
+              {
+                "Ref": "S3LifeCycleDelete"
+              },
+              "0"
+            ]
+          }
+      ]
+  },
+   "EnableExpiration": {
+    "Fn::Not": [
+      {
+        "Fn::Equals": [
+          {
+            "Ref": "S3LifeCycleDelete"
+          },
+          "0"
+        ]
+      }
+    ]
+  },
+  "EnableMultipartUploadExpiration": {
+    "Fn::Not": [
+      {
+        "Fn::Equals": [
+          {
+            "Ref": "S3LifeCycleDeleteMultipartUpload"
+          },
+          "0"
+        ]
+      }
+    ]
+  },
+  "EnableLifeCycleExpiration": {
+    "Fn::Or": [
+      {
+        "Condition": "EnableExpiration"
+      },
+      {
+        "Condition": "EnableMultipartUploadExpiration"
+      }
+    ]
+  }
+},
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": {
+          "Ref": "S3AccessControlStatus"
+        },
+        "BucketName": {
+          "Ref": "S3BucketName"
+        },
+        "LifecycleConfiguration" : {
+          "Fn::If": [
+            "EnableLifecycle",
+            {
+              "Rules": [
+                {
+                  "AbortIncompleteMultipartUpload": {
+                    "Fn::If": [
+                      "EnableMultipartUploadExpiration",
+                      {
+                        "DaysAfterInitiation": { "Ref": "S3LifeCycleDeleteMultipartUpload" }
+                      },
+                      { "Ref": "AWS::NoValue" }
+                    ]
+                  },
+                  "ExpirationInDays": {
+                    "Fn::If": [
+                      "EnableExpiration",
+                      { "Ref": "S3LifeCycleDelete" },
+                      { "Ref": "AWS::NoValue" }
+                    ]
+                  },
+                  "Status" : {
+                    "Fn::If": [
+                      "EnableLifeCycleExpiration",
+                      "Enabled",
+                      "Disabled"
+                    ]
+                  }
+                }
+              ]
+            },
+            { "Ref" : "AWS::NoValue" }
+          ]
+        },
+
+      }
+    }
+  }
+}

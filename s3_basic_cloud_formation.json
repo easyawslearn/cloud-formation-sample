@@ -1,0 +1,41 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Simple S3 bucket",
+  "Parameters": {
+    "S3BucketName": {
+      "Description": "Name of the S3 bucket",
+      "Type": "String",
+      "ConstraintDescription": "S3BucketName must be between 3 and 63 characters in length.",
+      "MinLength": "3",
+      "MaxLength": "63"
+    },
+    "S3AccessControlStatus": {
+      "Description": "Enabled, Suspend or Ignore Versioning",
+      "Type": "String",
+      "AllowedValues": [
+        "AuthenticatedRead",
+        "AwsExecRead",
+        "BucketOwnerRead",
+        "BucketOwnerFullControl",
+        "LogDeliveryWrite",
+        "Private",
+        "PublicRead",
+        "PublicReadWrite"
+      ],
+      "Default": "Private"
+    }
+  },
+  "Resources": {
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": {
+          "Ref": "S3AccessControlStatus"
+        },
+        "BucketName": {
+          "Ref": "S3BucketName"
+        },
+      }
+    }
+  }
+}

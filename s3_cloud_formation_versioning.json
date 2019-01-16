@@ -1,0 +1,105 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Simple S3 bucket",
+  "Parameters": {
+    "S3BucketName": {
+      "Description": "Name of the S3 bucket",
+      "Type": "String",
+      "ConstraintDescription": "S3BucketName must be between 3 and 63 characters in length.",
+      "MinLength": "3",
+      "MaxLength": "63"
+    },
+    "S3LifeCycleDelete": {
+      "Description": "Specify a number of days to keep files in the bucket, a value of 0 keeps the files stored in the bucket.",
+      "Type": "Number",
+      "MinValue": "0",
+      "MaxValue": "365",
+      "Default": "0"
+    },
+    "VersioningStatus": {
+      "Description": "Enabled, Suspend or Ignore Versioning",
+      "Type": "String",
+      "AllowedValues": [
+        "Enabled",
+        "Suspended"
+      ],
+      "Default": "Suspended"
+    },
+    "LambdaFunctionarn": {
+      "Description": "A lambda Function arn for notification",
+      "Type": "String",
+      "Default": ""
+    },
+    "S3AccessControlStatus": {
+      "Description": "Enabled, Suspend or Ignore Versioning",
+      "Type": "String",
+      "AllowedValues": [
+        "AuthenticatedRead",
+        "AwsExecRead",
+        "BucketOwnerRead",
+        "BucketOwnerFullControl",
+        "LogDeliveryWrite",
+        "Private",
+        "PublicRead",
+        "PublicReadWrite"
+      ],
+      "Default": "Private"
+    }
+  },
+  "Resources": {
+    "s3LoggingBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "LogDeliveryWrite",
+        "BucketName": "s3bucketname-for-logging-sample-test"
+      }
+    },
+    "S3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": {
+          "Ref": "S3AccessControlStatus"
+        },
+        "BucketName": {
+          "Ref": "S3BucketName"
+        },
+        "VersioningConfiguration": {
+          "Status": {
+            "Ref": "VersioningStatus"
+          }
+        },
+        "LoggingConfiguration": {
+          "DestinationBucketName": {
+            "Ref": "s3LoggingBucket"
+          },
+          "LogFilePrefix": ".logs"
+        },
+        "NotificationConfiguration" : {
+          "LambdaConfigurations" : [{
+            "Function" : { "ref": "LambdaFunctionarn"},
+            "Event" : "s3:ObjectCreated:*",
+            "Filter" : {
+              "S3Key" : {
+                "Rules" : [{
+                  "Name" : "suffix",
+                  "Value" : "zip"
+                }]
+              }
+            }
+          }]
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "deleterule",
+              "Status": "Enabled",
+              "ExpirationInDays": {
+                "Ref": "S3LifeCycleDelete"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
