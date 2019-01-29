@@ -25,6 +25,11 @@
       ],
       "Default": "Suspended"
     },
+    "LambdaFunctionarn": {
+      "Description": "A lambda Function arn for notification",
+      "Type": "String",
+      "Default": ""
+    },
     "S3AccessControlStatus": {
       "Description": "Enabled, Suspend or Ignore Versioning",
       "Type": "String",
@@ -42,6 +47,13 @@
     }
   },
   "Resources": {
+    "s3LoggingBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "AccessControl": "LogDeliveryWrite",
+        "BucketName": "s3bucketname-for-logging-sample-test"
+      }
+    },
     "S3Bucket": {
       "Type": "AWS::S3::Bucket",
       "Properties": {
@@ -55,6 +67,26 @@
           "Status": {
             "Ref": "VersioningStatus"
           }
+        },
+        "LoggingConfiguration": {
+          "DestinationBucketName": {
+            "Ref": "s3LoggingBucket"
+          },
+          "LogFilePrefix": ".logs"
+        },
+        "NotificationConfiguration" : {
+          "LambdaConfigurations" : [{
+            "Function" : { "ref": "LambdaFunctionarn"},
+            "Event" : "s3:ObjectCreated:*",
+            "Filter" : {
+              "S3Key" : {
+                "Rules" : [{
+                  "Name" : "suffix",
+                  "Value" : "zip"
+                }]
+              }
+            }
+          }]
         },
         "LifecycleConfiguration": {
           "Rules": [
