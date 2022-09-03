@@ -1,0 +1,153 @@
+Parameters:
+  FeatureName:
+    Description: The name of the feature associated with the AWS Identity and Access Management (IAM) role. 
+    Default: 'EC2'
+    Type: String
+  RoleArn:
+    Description: The Amazon Resource Name (ARN) of the IAM role that is associated with the DB instance.
+    Default: 'arn:aws:iam::293328213636:role/aws-service-role/rds.amazonaws.com/AWSServiceRoleForRDS' 
+    Type: String
+  AutoMinorVersionUpgrade:
+    Default: 'false'
+    Description: 'A value that indicates whether minor engine upgrades are applied automatically to the DB instance during the maintenance window. By default, minor engine upgrades are applied automatically.'
+    Type: String
+  BackupRetentionPeriod:
+    Default: '1'
+    Description: 'The number of days for which automated backups are retained , Not applicable. The retention period for automated backups is managed by the DB cluster.'
+    Type: String
+  CopyTagsToSnapshot:
+    Default: 'false'
+    Description: 'A value that indicates whether to copy tags from the DB instance to snapshots of the DB instance.'
+    Type: String
+  KmsKeyId:
+    Description: 'The ARN of the AWS KMS key thats used to encrypt the DB instance'
+    Default: 'arn:aws:kms:us-west-2:293328213636:key/c68275d8-00d9-41f9-9d62-41abfcc3c848'
+    Type: String
+  MaxAllocatedStorage: 
+    Default: '100'
+    Description: 'The upper limit in gibibytes (GiB) to which Amazon RDS can automatically scale the storage of the DB instance.'
+    Type: String
+  StorageEncrypted: 
+    Default: 'true'
+    Type: String
+  PubliclyAccessible: 
+    Default: 'true'
+    Type: String
+  AvailabilityZone:
+    Description: 'The Availability Zone (AZ) where the database will be created.'
+    Type: String
+    Default: 'us-west-2a'
+  DeleteAutomatedBackups:
+    Default: 'false'
+    Description: 'A value that indicates whether to remove automated backups immediately after the DB instance is deleted.'
+    Type: String
+  DeletionProtection:
+    Default: 'true'
+    Description: 'A value that indicates whether the DB instance has deletion protection enabled.'
+    Type: String
+  DBName:
+    Default: MyDb
+    Description: The database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+  DBUser:
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    Default: 'demo1'
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric
+      characters.
+  DBPassword:
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    Default: 'test12345'
+    MinLength: '1'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]+'
+    ConstraintDescription: must contain only alphanumeric characters.
+  DBAllocatedStorage:
+    Default: '50'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '20'
+    MaxValue: '65536'
+    ConstraintDescription: must be between 5 and 1024Gb.
+  DBAllowMajorVersionUpgrade:
+    Default: 'true'
+    Type: String
+  DBInstanceClass:
+    Description: The database instance type
+    Type: String
+    Default: db.m5.xlarge
+    ConstraintDescription: must select a valid database instance type.
+  EC2SecurityGroup:
+    Description: The EC2 security group that contains instances that need access to
+      the database
+    Default: default
+    Type: String
+    AllowedPattern: '[a-zA-Z0-9\-]+'
+    ConstraintDescription: must be a valid security group name.
+  MultiAZ:
+    Description: Multi-AZ master database
+    Type: String
+    Default: 'false'
+    AllowedValues: ['true', 'false']
+    ConstraintDescription: must be true or false.
+Conditions:
+  Is-EC2-VPC: !Or [!Equals [!Ref 'AWS::Region', eu-central-1], !Equals [!Ref 'AWS::Region',
+      cn-north-1]]
+  Is-EC2-Classic: !Not [{Condition: Is-EC2-VPC}]
+Resources:
+  DBEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Condition: Is-EC2-VPC
+    Properties:
+      GroupDescription: Open database for access
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3306'
+        ToPort: '3306'
+        SourceSecurityGroupName: !Ref 'EC2SecurityGroup'
+  DBSecurityGroup:
+    Type: AWS::RDS::DBSecurityGroup
+    Condition: Is-EC2-Classic
+    Properties:
+      DBSecurityGroupIngress:
+        EC2SecurityGroupName: !Ref 'EC2SecurityGroup'
+      GroupDescription: database access
+  MasterDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref 'DBName'
+      AllocatedStorage: !Ref 'DBAllocatedStorage'
+      AllowMajorVersionUpgrade: !Ref  'DBAllowMajorVersionUpgrade'
+      AutoMinorVersionUpgrade: !Ref 'AutoMinorVersionUpgrade'
+      AvailabilityZone: !Ref 'AvailabilityZone'
+      BackupRetentionPeriod: !Ref 'BackupRetentionPeriod'
+      CopyTagsToSnapshot: !Ref 'CopyTagsToSnapshot'
+      DBInstanceClass: !Ref 'DBInstanceClass'
+      DeleteAutomatedBackups: !Ref 'DeleteAutomatedBackups'
+      DeletionProtection: !Ref 'DeletionProtection'
+      Engine: oracle-ee
+      KmsKeyId: !Ref 'KmsKeyId'
+      MaxAllocatedStorage: !Ref 'MaxAllocatedStorage'
+      StorageEncrypted: !Ref 'StorageEncrypted'
+      PubliclyAccessible: !Ref 'PubliclyAccessible'
+      MasterUsername: !Ref 'DBUser'
+      MasterUserPassword: !Ref 'DBPassword'
+      MultiAZ: !Ref 'MultiAZ'
+      Tags:
+      - Key: Name
+        Value: Master Database
+      VPCSecurityGroups: !If [Is-EC2-VPC, [!GetAtt [DBEC2SecurityGroup, GroupId]],
+        !Ref 'AWS::NoValue']
+      DBSecurityGroups: !If [Is-EC2-Classic, [!Ref 'DBSecurityGroup'], !Ref 'AWS::NoValue']
+    DeletionPolicy: Snapshot
